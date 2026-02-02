@@ -1,0 +1,6 @@
+# 固定参数 数据格式只能是数字和字符串
+api_domain: http://test.local.com
+timeout: 5
+
+# 自定义参数 数据格式只能是数字和字符串
+token: a112324

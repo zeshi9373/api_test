@@ -1,0 +1,18 @@
+api: /User/AdminUser/operationLogin
+method: POST
+params:
+  email: test@admin.com
+  password: 123456
+  rand: fn.RandInt(100,999)
+
+expect:
+  assertEquals:
+    code: 0
+    message: "登录成功"
+  assertNotEquals:
+    data.token: ""
+    data.user_id: 0
+
+cache:
+  token: data.token
+  user_id: data.user_id

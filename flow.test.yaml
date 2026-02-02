@@ -1,0 +1,3 @@
+include: 
+  - ./templates/user/login.test.yaml 
+  - ./templates/user/menuList.test.yaml
