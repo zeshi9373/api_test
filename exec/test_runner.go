@@ -1,36 +1,38 @@
 package exec
 
 import (
-	"test_api/cache"
-	"test_api/tool"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"test_api/cache"
+	"test_api/tool"
 )
 
 // TestRunner 测试运行器
 type TestRunner struct {
 	TestCase *APITestCase
 	BaseURL  string
-	Cache    map[string]interface{}
+	Cache    map[string]any
 }
 
 // NewTestRunner 创建测试运行器
 func NewTestRunner(testCase *APITestCase) *TestRunner {
 	return &TestRunner{
 		TestCase: testCase,
-		Cache:    make(map[string]interface{}),
+		Cache:    make(map[string]any),
 	}
 }
 
 // executeAssertions 执行断言
-func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
+func (r *TestRunner) executeAssertions(respData map[string]any) bool {
+	errors := make([]string, 0)
 	// assertEquals 断言
 	for path, expected := range r.TestCase.Expect.AssertEquals {
 		if err := r.assertPathEquals(respData, path, expected); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
@@ -38,6 +40,7 @@ func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
 	for path, notExpected := range r.TestCase.Expect.AssertNotEquals {
 		if err := r.assertPathNotEquals(respData, path, notExpected); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
@@ -45,6 +48,7 @@ func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
 	for path, expected := range r.TestCase.Expect.AssertContains {
 		if err := r.assertPathContains(respData, path, expected); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
@@ -52,6 +56,7 @@ func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
 	for path, pattern := range r.TestCase.Expect.AssertMatches {
 		if err := r.assertPathMatches(respData, path, pattern); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
@@ -59,6 +64,7 @@ func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
 	for path, typeName := range r.TestCase.Expect.AssertType {
 		if err := r.assertPathType(respData, path, typeName); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
@@ -66,29 +72,37 @@ func (r *TestRunner) executeAssertions(respData map[string]interface{}) error {
 	for path, length := range r.TestCase.Expect.AssertLength {
 		if err := r.assertPathLength(respData, path, length); err != nil {
 			fmt.Printf("❌断言失败: %s \n", err.Error())
+			errors = append(errors, fmt.Sprintf("❌断言失败: %s \n", err.Error()))
 		}
 	}
 
-	return nil
+	if len(errors) > 0 {
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s\n%s", "测试接口："+r.TestCase.API, strings.Join(errors, "")))
+		return false
+	}
+
+	TestTotal.Pass++
+	return true
 }
 
 // getValueByPath 通过路径获取值
-func (r *TestRunner) getValueByPath(data map[string]interface{}, path string) (interface{}, error) {
+func (r *TestRunner) getValueByPath(data map[string]any, path string) (any, error) {
 	parts := strings.Split(path, ".")
-	var current interface{} = data
+	var current any = data
 
 	for k := 0; k < len(parts); k++ {
 		if tool.IsNumericByRune(parts[k]) {
 			i, _ := strconv.Atoi(parts[k])
-			if _, ok := current.([]interface{}); ok {
-				current = current.([]interface{})[i]
+			if _, ok := current.([]any); ok {
+				current = current.([]any)[i]
 				continue
 			} else {
 				return nil, fmt.Errorf("路径 %s 访问越界", path)
 			}
 		}
 
-		m, ok := current.(map[string]interface{})
+		m, ok := current.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("路径 %s 无法访问: 不是对象类型", parts[k])
 		}
@@ -105,7 +119,8 @@ func (r *TestRunner) getValueByPath(data map[string]interface{}, path string) (i
 }
 
 // assertPathEquals 断言路径值相等
-func (r *TestRunner) assertPathEquals(data map[string]interface{}, path string, expected interface{}) error {
+func (r *TestRunner) assertPathEquals(data map[string]any, path string, expected any) error {
+	expected = r.getDataValueByPath(data, expected)
 	actual, err := r.getValueByPath(data, path)
 
 	if err != nil {
@@ -133,7 +148,8 @@ func (r *TestRunner) assertPathEquals(data map[string]interface{}, path string, 
 }
 
 // assertPathNotEquals 断言路径值不相等
-func (r *TestRunner) assertPathNotEquals(data map[string]interface{}, path string, notExpected interface{}) error {
+func (r *TestRunner) assertPathNotEquals(data map[string]any, path string, notExpected any) error {
+	notExpected = r.getDataValueByPath(data, notExpected)
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertNotEquals %s: %v", path, err)
@@ -152,11 +168,13 @@ func (r *TestRunner) assertPathNotEquals(data map[string]interface{}, path strin
 }
 
 // assertPathContains 断言路径值包含
-func (r *TestRunner) assertPathContains(data map[string]interface{}, path string, expected interface{}) error {
+func (r *TestRunner) assertPathContains(data map[string]any, path string, expected any) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertContains %s: %v", path, err)
 	}
+
+	expected = r.getDataValueByPath(data, expected)
 
 	switch actualVal := actual.(type) {
 	case string:
@@ -177,7 +195,7 @@ func (r *TestRunner) assertPathContains(data map[string]interface{}, path string
 }
 
 // assertPathMatches 断言路径值匹配正则
-func (r *TestRunner) assertPathMatches(data map[string]interface{}, path, pattern string) error {
+func (r *TestRunner) assertPathMatches(data map[string]any, path, pattern string) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertMatches %s: %v", path, err)
@@ -188,6 +206,7 @@ func (r *TestRunner) assertPathMatches(data map[string]interface{}, path, patter
 		return fmt.Errorf("assertMatches %s: 值应为字符串类型", path)
 	}
 
+	pattern = fmt.Sprintf("%v", r.getDataValueByPath(data, pattern))
 	matched, err := regexp.MatchString(pattern, actualStr)
 	if err != nil {
 		return fmt.Errorf("assertMatches %s: 正则表达式错误: %v", path, err)
@@ -203,7 +222,7 @@ func (r *TestRunner) assertPathMatches(data map[string]interface{}, path, patter
 }
 
 // assertPathType 断言路径值类型
-func (r *TestRunner) assertPathType(data map[string]interface{}, path, typeName string) error {
+func (r *TestRunner) assertPathType(data map[string]any, path, typeName string) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertType %s: %v", path, err)
@@ -217,9 +236,9 @@ func (r *TestRunner) assertPathType(data map[string]interface{}, path, typeName 
 		actualType = "number"
 	case bool:
 		actualType = "boolean"
-	case map[string]interface{}:
+	case map[string]any:
 		actualType = "object"
-	case []interface{}:
+	case []any:
 		actualType = "array"
 	case nil:
 		actualType = "null"
@@ -237,7 +256,7 @@ func (r *TestRunner) assertPathType(data map[string]interface{}, path, typeName 
 }
 
 // assertPathLength 断言路径值长度
-func (r *TestRunner) assertPathLength(data map[string]interface{}, path string, expectedLength int) error {
+func (r *TestRunner) assertPathLength(data map[string]any, path string, expectedLength int) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertLength %s: %v", path, err)
@@ -247,9 +266,9 @@ func (r *TestRunner) assertPathLength(data map[string]interface{}, path string, 
 	switch v := actual.(type) {
 	case string:
 		actualLength = len(v)
-	case []interface{}:
+	case []any:
 		actualLength = len(v)
-	case map[string]interface{}:
+	case map[string]any:
 		actualLength = len(v)
 	default:
 		return fmt.Errorf("assertLength %s: 不支持的类型 %T", path, actual)
@@ -265,7 +284,7 @@ func (r *TestRunner) assertPathLength(data map[string]interface{}, path string, 
 }
 
 // AssertTrue 断言真
-func (r *TestRunner) AssertTrue(data map[string]interface{}, path string) error {
+func (r *TestRunner) AssertTrue(data map[string]any, path string) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertTrue %s: %v", path, err)
@@ -280,7 +299,7 @@ func (r *TestRunner) AssertTrue(data map[string]interface{}, path string) error 
 }
 
 // AssertFalse 断言假
-func (r *TestRunner) AssertFalse(data map[string]interface{}, path string) error {
+func (r *TestRunner) AssertFalse(data map[string]any, path string) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertFalse %s: %v", path, err)
@@ -295,13 +314,14 @@ func (r *TestRunner) AssertFalse(data map[string]interface{}, path string) error
 }
 
 // AssertIn 断言路径值在列表中
-func (r *TestRunner) AssertIn(data map[string]interface{}, path string, expected []interface{}) error {
+func (r *TestRunner) AssertIn(data map[string]any, path string, expected []any) error {
 	actual, err := r.getValueByPath(data, path)
 	if err != nil {
 		return fmt.Errorf("assertIn %s: %v", path, err)
 	}
 
 	for _, v := range expected {
+		v = r.getDataValueByPath(data, v)
 		if v == actual {
 			fmt.Printf("✅ assertIn %s: %v \n", path, v)
 			return nil
@@ -312,18 +332,52 @@ func (r *TestRunner) AssertIn(data map[string]interface{}, path string, expected
 }
 
 // deepEqual 深度比较
-func deepEqual(a, b interface{}) bool {
+func deepEqual(a, b any) bool {
 	aJSON, _ := json.Marshal(a)
 	bJSON, _ := json.Marshal(b)
 	return string(aJSON) == string(bJSON)
 }
 
 // cacheData 缓存数据
-func (r *TestRunner) cacheData(data map[string]interface{}) {
+func (r *TestRunner) cacheData(data map[string]any) {
 	for cacheKey, dataPath := range r.TestCase.Cache {
 		value, err := r.getValueByPath(data, dataPath)
 		if err == nil && value != nil {
 			cache.Cache[cacheKey] = value
 		}
 	}
+}
+
+func (r *TestRunner) getDataValueByPath(data map[string]any, expected any) any {
+	if expectedStr, ok := expected.(string); ok {
+		if strings.Contains(expectedStr, "dataValue(") {
+			if strings.Index(expectedStr, "dataValue(") == 0 && strings.Index(expectedStr, ")") == len(expectedStr)-1 {
+				expectedStrPath := expectedStr[strings.Index(expectedStr, "dataValue(")+len("dataValue(") : strings.Index(expectedStr, ")")]
+				expectedValue, _ := r.getValueByPath(data, expectedStrPath)
+				return expectedValue
+			} else {
+				var expectedStrLeft, expectedStrRight string
+
+				if strings.Index(expectedStr, "dataValue(") > 0 {
+					expectedStrLeft = expectedStr[0:strings.Index(expectedStr, "dataValue(")]
+				}
+
+				expectedStrReMain := expectedStr[strings.Index(expectedStr, "dataValue("):]
+				// fmt.Println("expectedStrReMain:", expectedStrReMain)
+				// fmt.Println("expectedStrReMainIndex1:", strings.Index(expectedStrReMain, "dataValue(")+len("dataValue("))
+				// fmt.Println("expectedStrReMainIndex2:", strings.Index(expectedStrReMain, ")"))
+				expectedStrPath := expectedStrReMain[strings.Index(expectedStrReMain, "dataValue(")+len("dataValue(") : strings.Index(expectedStrReMain, ")")-strings.Index(expectedStrReMain, "dataValue(")]
+				// fmt.Println("expectedStrPath:", expectedStrPath)
+
+				if strings.Index(expectedStrReMain, ")") < len(expectedStrReMain)-1 {
+					expectedStrRight = expectedStrReMain[strings.Index(expectedStrReMain, ")")+1:]
+				}
+
+				value, _ := r.getValueByPath(data, expectedStrPath)
+				return expectedStrLeft + fmt.Sprintf("%v", value) + expectedStrRight
+			}
+		}
+	}
+
+	return expected
 }

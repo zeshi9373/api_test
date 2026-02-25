@@ -6,6 +6,7 @@
 ```
 /conf   //配置文件解析
 /exec  // 执行流程文件
+/flow_test  // 流程测试文件
 /logger  // 日志记录包
 /logs    // 测试日志记录（内含接口相应日志）
 /templates  // 测试用例编写目录（主要）
@@ -38,6 +39,7 @@ GOOS=darwin go build -o test_api_darwin .
 # 固定参数 数据格式只能是数字和字符串
 api_domain: http://test.local.com  // 接口请求域名
 timeout: 5  // 接口请求超时设置 （秒）
+feishu_robot: https://open.feishu.cn/open-apis/bot/v2/hook/xxxx-xxx-xxxx  // 飞书机器人webhook地址
 
 # 自定义参数 数据格式只能是数字和字符串
 token: a112324
@@ -85,6 +87,11 @@ cache:   // 缓存数据 以便后面接口使用
 ```
 Authorization: "Bearer $cache.token"  // 使用cache变量 $cache.+变量名
 Authorization: "Bearer $token"  // 使用全局变量 config.yaml内配置 $+变量
+```
+
+比较中含有接口获取的值
+```
+dataValue(data.list.0.id)   // dataValue(path)  path是值的层级
 ```
 
 # 支持的方法

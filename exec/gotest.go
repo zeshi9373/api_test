@@ -1,14 +1,14 @@
 package exec
 
 import (
-	"test_api/conf"
-	"test_api/logger"
-	"test_api/tool"
-	"test_api/trans"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"test_api/conf"
+	"test_api/logger"
+	"test_api/tool"
+	"test_api/trans"
 	"time"
 
 	_ "test_api/fn"
