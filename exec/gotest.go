@@ -42,18 +42,24 @@ func GetCase(filepath string) {
 	byteStream, err := os.ReadFile(filepath)
 
 	if err != nil {
-		panic("read test case file error")
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件不存在 ："+filepath))
+		return
 	}
 
 	var testCase APITestCase
 	yaml.Unmarshal(byteStream, &testCase)
 
 	if len(testCase.API) == 0 {
-		panic("api is empty")
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件api为空 ："+filepath))
+		return
 	}
 
 	if len(testCase.Method) == 0 {
-		panic("method is empty")
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件method为空 ："+filepath))
+		return
 	}
 
 	domain := conf.Config["api_domain"].(string)
@@ -78,7 +84,9 @@ func GetCase(filepath string) {
 		p, err := tool.MapAnyToString(testCase.Params)
 
 		if err != nil {
-			panic("params is not support")
+			TestTotal.Fail++
+			TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件params格式不支持 ："+filepath))
+			return
 		}
 
 		response, reserr = tool.NewHttp(domain+testCase.API, time.Duration(timeout)*time.Second).Get(testCase.Headers, p)
@@ -86,15 +94,21 @@ func GetCase(filepath string) {
 		d, err := json.Marshal(testCase.Params)
 
 		if err != nil {
-			panic("params is not support")
+			TestTotal.Fail++
+			TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件params格式不支持 ："+filepath))
+			return
 		}
 		response, reserr = tool.NewHttp(domain+testCase.API, time.Duration(timeout)*time.Second).Post(testCase.Headers, d)
 	default:
-		panic("method is not support")
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件method格式不支持 ："+filepath))
+		return
 	}
 
 	if reserr != nil {
-		panic("api request " + reserr.Error())
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("测试文件：%s，请求报错：%s", filepath, reserr.Error()))
+		return
 	}
 
 	logger.NewLogger(strings.ReplaceAll(testCase.API, "/", "_")).Info("请求接口日志", logger.Fields{

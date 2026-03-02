@@ -1,11 +1,11 @@
 package trans
 
 import (
+	"fmt"
+	"strings"
 	"test_api/conf"
 	"test_api/fn"
 	"test_api/tool"
-	"fmt"
-	"strings"
 )
 
 func TransValue(value any) any {
@@ -80,7 +80,7 @@ func TransFnValue(value any) any {
 			result, err := fn.NewFuncManager().Call(valueType[start : end+1])
 
 			if err != nil {
-				panic("fn.FuncName error")
+				return value
 			}
 
 			if len(valueType) > end+1 {

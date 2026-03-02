@@ -1,12 +1,12 @@
 package trans
 
 import (
+	"fmt"
+	"strings"
 	"test_api/cache"
 	"test_api/conf"
 	"test_api/fn"
 	"test_api/tool"
-	"fmt"
-	"strings"
 )
 
 func TransValueParams(params map[string]any) map[string]any {
@@ -73,7 +73,7 @@ func fnParams(params map[string]any) map[string]any {
 				result, err := fn.NewFuncManager().Call(valueType[start : end+1])
 
 				if err != nil {
-					panic("fn.FuncName error")
+					params[key] = value
 				}
 
 				if len(valueType) > end+1 {

@@ -1,12 +1,12 @@
 package trans
 
 import (
+	"fmt"
+	"strings"
 	"test_api/cache"
 	"test_api/conf"
 	"test_api/fn"
 	"test_api/tool"
-	"fmt"
-	"strings"
 )
 
 func TransValueHeaders(headers map[string]string) map[string]string {
@@ -59,7 +59,7 @@ func fnHeaders(headers map[string]string) map[string]string {
 			result, err := fn.NewFuncManager().Call(value[start : end+1])
 
 			if err != nil {
-				panic("fn.FuncName error")
+				headers[key] = value
 			}
 
 			if len(value) > end+1 {
