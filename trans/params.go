@@ -22,7 +22,7 @@ func cacheParams(params map[string]any) map[string]any {
 		if valueType, ok := value.(string); ok {
 			for k, v := range cache.Cache {
 				if strings.Contains(valueType, "$cache."+k) {
-					if len(valueType) == len("$cache."+k) {
+					if len(valueType) >= len("$cache."+k) {
 						vs, err := tool.AnyToString(v)
 
 						if err != nil {
@@ -45,7 +45,7 @@ func customConfigParams(params map[string]any) map[string]any {
 		if valueType, ok := value.(string); ok {
 			for k, v := range conf.Config {
 				if strings.Contains(valueType, "$"+k) {
-					if len(valueType) == len("$"+k) {
+					if len(valueType) >= len("$"+k) {
 						vs, err := tool.AnyToString(v)
 
 						if err != nil {
