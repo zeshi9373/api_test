@@ -16,14 +16,15 @@ type FuncManager struct {
 func NewFuncManager() *FuncManager {
 	return &FuncManager{
 		funcs: map[string]interface{}{
-			"fn.RandInt":    RandInt,
-			"fn.Time":       Time,
-			"fn.TimeNanos":  TimeNanos,
-			"fn.TimeMillis": TimeMillis,
-			"fn.TimeMicros": TimeMicros,
-			"fn.Date":       Date,
-			"fn.DateTime":   DateTime,
-			"fn.RandString": RandString,
+			"fn.RandInt":         RandInt,
+			"fn.Time":            Time,
+			"fn.TimeNanos":       TimeNanos,
+			"fn.TimeMillis":      TimeMillis,
+			"fn.TimeMicros":      TimeMicros,
+			"fn.Date":            Date,
+			"fn.DateTime":        DateTime,
+			"fn.RandString":      RandString,
+			"fn.SearchListValue": SearchListValue,
 		},
 	}
 }
@@ -89,6 +90,18 @@ func splitArgs(s string) []string {
 		case ')':
 			parenDepth--
 			current.WriteRune(r)
+		case '[':
+			parenDepth++
+			current.WriteRune(r)
+		case ']':
+			parenDepth--
+			current.WriteRune(r)
+		case '{':
+			parenDepth++
+			current.WriteRune(r)
+		case '}':
+			parenDepth--
+			current.WriteRune(r)
 		case ',':
 			if parenDepth == 0 {
 				args = append(args, strings.TrimSpace(current.String()))
@@ -119,6 +132,6 @@ func parseArg(argStr string, typ reflect.Type) (interface{}, error) {
 	case reflect.Float64:
 		return strconv.ParseFloat(argStr, 64)
 	default:
-		return nil, fmt.Errorf("unsupported type: %v", typ)
+		return argStr, nil
 	}
 }

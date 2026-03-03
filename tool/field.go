@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 // IsNotEmpty 判断 any 类型是否不为空
@@ -233,5 +234,38 @@ func AnyToString(value any) (string, error) {
 		return fmt.Sprintf("%+v", value), nil
 	default:
 		return fmt.Sprintf("%v", value), nil
+	}
+}
+
+func SliceMapToJson(value any) any {
+	if value == "" {
+		return value
+	}
+
+	rv := reflect.ValueOf(value)
+
+	// 处理指针
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return value
+		}
+		rv = rv.Elem()
+	}
+
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		fallthrough
+	case reflect.Map:
+		fallthrough
+	case reflect.Struct:
+		// 转换为 JSON 对象字符串
+		str, err := json.Marshal(value)
+
+		if err != nil {
+			return value
+		}
+		return string(str)
+	default:
+		return value
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"test_api/cache"
 	"test_api/tool"
+	"test_api/trans"
 )
 
 // TestRunner 测试运行器
@@ -78,7 +79,8 @@ func (r *TestRunner) executeAssertions(respData map[string]any) bool {
 
 	if len(errors) > 0 {
 		TestTotal.Fail++
-		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s\n%s", "测试接口："+r.TestCase.API, strings.Join(errors, "")))
+		p, _ := json.Marshal(r.TestCase.Params)
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("测试接口：%s (%s)\n请求参数：%s\n%s", r.TestCase.API, r.TestCase.Description, string(p), strings.Join(errors, "")))
 		return false
 	}
 
@@ -95,10 +97,14 @@ func (r *TestRunner) getValueByPath(data map[string]any, path string) (any, erro
 		if tool.IsNumericByRune(parts[k]) {
 			i, _ := strconv.Atoi(parts[k])
 			if _, ok := current.([]any); ok {
+				if i >= len(current.([]any)) {
+					return nil, fmt.Errorf("路径 %s 数据不存在", path)
+				}
+
 				current = current.([]any)[i]
 				continue
 			} else {
-				return nil, fmt.Errorf("路径 %s 访问越界", path)
+				return nil, fmt.Errorf("路径 %s 数据不存在", path)
 			}
 		}
 
@@ -174,17 +180,55 @@ func (r *TestRunner) assertPathContains(data map[string]any, path string, expect
 		return fmt.Errorf("assertContains %s: %v", path, err)
 	}
 
-	expected = r.getDataValueByPath(data, expected)
-
 	switch actualVal := actual.(type) {
 	case string:
 		expectedStr, ok := expected.(string)
 		if !ok {
 			return fmt.Errorf("assertContains %s: 期望值应为字符串", path)
 		}
-		if !strings.Contains(actualVal, expectedStr) {
-			return fmt.Errorf("assertContains %s: 期望包含 '%s', 实际 '%s'",
-				path, expectedStr, actualVal)
+
+		if !strings.Contains(expectedStr, "@@") && !strings.Contains(expectedStr, "||") {
+			expected = r.getDataValueByPath(data, expectedStr)
+			// fmt.Println("expected:", expected)
+			if !strings.Contains(actualVal, fmt.Sprintf("%v", expected)) {
+				return fmt.Errorf("assertContains %s: 期望包含 '%s', 实际 '%s'",
+					path, expectedStr, actualVal)
+			}
+		} else {
+			// 是否判断多个值
+			// @@ 多个值都包含
+			// || 任意一个值包含
+			if strings.Contains(expectedStr, "@@") {
+				expectedSlice := strings.Split(expectedStr, "@@")
+
+				for _, v := range expectedSlice {
+					e := r.getDataValueByPath(data, v)
+
+					if !strings.Contains(actualVal, fmt.Sprintf("%v", e)) {
+						return fmt.Errorf("assertContains @@ %s: 期望包含 '%s', 实际 '%s'",
+							path, expectedStr, actualVal)
+					}
+				}
+			}
+
+			if strings.Contains(expectedStr, "||") {
+				var isContains bool
+				expectedSlice := strings.Split(expectedStr, "||")
+
+				for _, v := range expectedSlice {
+					e := r.getDataValueByPath(data, v)
+
+					if strings.Contains(actualVal, fmt.Sprintf("%v", e)) {
+						isContains = true
+						break
+					}
+				}
+
+				if !isContains {
+					return fmt.Errorf("assertContains || %s: 期望包含 '%s', 实际 '%s'",
+						path, expectedStr, actualVal)
+				}
+			}
 		}
 	default:
 		return fmt.Errorf("assertContains %s: 仅支持字符串类型", path)
@@ -343,18 +387,17 @@ func (r *TestRunner) cacheData(data map[string]any) {
 	for cacheKey, dataPath := range r.TestCase.Cache {
 		value, err := r.getValueByPath(data, dataPath)
 		if err == nil && value != nil {
-			cache.Cache[cacheKey] = value
+			cache.Cache[cacheKey] = tool.SliceMapToJson(value)
 		}
 	}
 }
-
 func (r *TestRunner) getDataValueByPath(data map[string]any, expected any) any {
 	if expectedStr, ok := expected.(string); ok {
 		if strings.Contains(expectedStr, "dataValue(") {
 			if strings.Index(expectedStr, "dataValue(") == 0 && strings.Index(expectedStr, ")") == len(expectedStr)-1 {
 				expectedStrPath := expectedStr[strings.Index(expectedStr, "dataValue(")+len("dataValue(") : strings.Index(expectedStr, ")")]
 				expectedValue, _ := r.getValueByPath(data, expectedStrPath)
-				return expectedValue
+				return trans.TransValue(expectedValue)
 			} else {
 				var expectedStrLeft, expectedStrRight string
 
@@ -374,10 +417,10 @@ func (r *TestRunner) getDataValueByPath(data map[string]any, expected any) any {
 				}
 
 				value, _ := r.getValueByPath(data, expectedStrPath)
-				return expectedStrLeft + fmt.Sprintf("%v", value) + expectedStrRight
+				return trans.TransValue(expectedStrLeft + fmt.Sprintf("%v", value) + expectedStrRight)
 			}
 		}
 	}
 
-	return expected
+	return trans.TransValue(expected)
 }

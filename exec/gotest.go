@@ -17,13 +17,14 @@ import (
 )
 
 type APITestCase struct {
-	ApiDomain string            `yaml:"api_domain"`
-	API       string            `yaml:"api"`
-	Method    string            `yaml:"method"`
-	Headers   map[string]string `yaml:"headers"`
-	Params    map[string]any    `yaml:"params"`
-	Expect    Expect            `yaml:"expect"`
-	Cache     map[string]string `yaml:"cache"`
+	ApiDomain   string            `yaml:"api_domain"`
+	API         string            `yaml:"api"`
+	Description string            `yaml:"description"`
+	Method      string            `yaml:"method"`
+	Headers     map[string]string `yaml:"headers"`
+	Params      map[string]any    `yaml:"params"`
+	Expect      Expect            `yaml:"expect"`
+	Cache       map[string]string `yaml:"cache"`
 }
 
 type Expect struct {

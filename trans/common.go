@@ -32,7 +32,7 @@ func TransConfigValue(value any) any {
 	if valueType, ok := value.(string); ok {
 		for k, v := range conf.Config {
 			if strings.Contains(valueType, "$"+k) {
-				if len(valueType) == len("$"+k) {
+				if len(valueType) >= len("$"+k) {
 					vs, err := tool.AnyToString(v)
 
 					if err != nil {
@@ -54,7 +54,7 @@ func TransCacheValue(value any) any {
 	if valueType, ok := value.(string); ok {
 		for k, v := range conf.Config {
 			if strings.Contains(valueType, "$cache."+k) {
-				if len(valueType) == len("$cache."+k) {
+				if len(valueType) >= len("$cache."+k) {
 					vs, err := tool.AnyToString(v)
 
 					if err != nil {
@@ -84,10 +84,10 @@ func TransFnValue(value any) any {
 			}
 
 			if len(valueType) > end+1 {
-				value = valueType[0:start+1] + fmt.Sprintf("%v", result) + valueType[end+1:]
+				value = valueType[0:start] + fmt.Sprintf("%v", result) + valueType[end+1:]
 			} else {
 				if start > 0 {
-					value = valueType[0:start+1] + fmt.Sprintf("%v", result)
+					value = valueType[0:start] + fmt.Sprintf("%v", result)
 				} else {
 					value = result
 				}
