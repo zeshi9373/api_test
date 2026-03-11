@@ -17,6 +17,7 @@ import (
 )
 
 type APITestCase struct {
+	FilePath    string            `yaml:"file_path"`
 	ApiDomain   string            `yaml:"api_domain"`
 	API         string            `yaml:"api"`
 	Description string            `yaml:"description"`
@@ -73,7 +74,9 @@ func GetCase(filepath string) {
 	var response []byte
 	var reserr error
 
-	fmt.Printf("接口测试开始 %s \n", testCase.API)
+	p, _ := json.Marshal(testCase.Params)
+	testCase.FilePath = filepath
+	fmt.Printf("接口测试开始 %s (%s)\n请求参数：%s\n", testCase.API, testCase.Description, string(p))
 
 	testCase.Headers = trans.TransValueHeaders(testCase.Headers)
 	testCase.Params = trans.TransValueParams(testCase.Params)

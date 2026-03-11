@@ -80,7 +80,7 @@ func (r *TestRunner) executeAssertions(respData map[string]any) bool {
 	if len(errors) > 0 {
 		TestTotal.Fail++
 		p, _ := json.Marshal(r.TestCase.Params)
-		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("测试接口：%s (%s)\n请求参数：%s\n%s", r.TestCase.API, r.TestCase.Description, string(p), strings.Join(errors, "")))
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("测试文件：%s\n测试接口：%s (%s)\n请求参数：%s\n%s", r.TestCase.FilePath, r.TestCase.API, r.TestCase.Description, string(p), strings.Join(errors, "")))
 		return false
 	}
 
@@ -392,33 +392,39 @@ func (r *TestRunner) cacheData(data map[string]any) {
 	}
 }
 func (r *TestRunner) getDataValueByPath(data map[string]any, expected any) any {
-	if expectedStr, ok := expected.(string); ok {
-		if strings.Contains(expectedStr, "dataValue(") {
-			if strings.Index(expectedStr, "dataValue(") == 0 && strings.Index(expectedStr, ")") == len(expectedStr)-1 {
-				expectedStrPath := expectedStr[strings.Index(expectedStr, "dataValue(")+len("dataValue(") : strings.Index(expectedStr, ")")]
-				expectedValue, _ := r.getValueByPath(data, expectedStrPath)
-				return trans.TransValue(expectedValue)
+	for {
+		if expectedStr, ok := expected.(string); ok {
+			if strings.Contains(expectedStr, "dataValue(") {
+				if strings.Index(expectedStr, "dataValue(") == 0 && strings.Index(expectedStr, ")") == len(expectedStr)-1 {
+					expectedStrPath := expectedStr[strings.Index(expectedStr, "dataValue(")+len("dataValue(") : strings.Index(expectedStr, ")")]
+					expectedValue, _ := r.getValueByPath(data, expectedStrPath)
+					expected = trans.TransValue(expectedValue)
+				} else {
+					var expectedStrLeft, expectedStrRight string
+
+					if strings.Index(expectedStr, "dataValue(") > 0 {
+						expectedStrLeft = expectedStr[0:strings.Index(expectedStr, "dataValue(")]
+					}
+
+					expectedStrReMain := expectedStr[strings.Index(expectedStr, "dataValue("):]
+					// fmt.Println("expectedStrReMain:", expectedStrReMain)
+					// fmt.Println("expectedStrReMainIndex1:", strings.Index(expectedStrReMain, "dataValue(")+len("dataValue("))
+					// fmt.Println("expectedStrReMainIndex2:", strings.Index(expectedStrReMain, ")"))
+					expectedStrPath := expectedStrReMain[strings.Index(expectedStrReMain, "dataValue(")+len("dataValue(") : strings.Index(expectedStrReMain, ")")-strings.Index(expectedStrReMain, "dataValue(")]
+					// fmt.Println("expectedStrPath:", expectedStrPath)
+
+					if strings.Index(expectedStrReMain, ")") < len(expectedStrReMain)-1 {
+						expectedStrRight = expectedStrReMain[strings.Index(expectedStrReMain, ")")+1:]
+					}
+
+					value, _ := r.getValueByPath(data, expectedStrPath)
+					expected = trans.TransValue(expectedStrLeft + fmt.Sprintf("%v", value) + expectedStrRight)
+				}
 			} else {
-				var expectedStrLeft, expectedStrRight string
-
-				if strings.Index(expectedStr, "dataValue(") > 0 {
-					expectedStrLeft = expectedStr[0:strings.Index(expectedStr, "dataValue(")]
-				}
-
-				expectedStrReMain := expectedStr[strings.Index(expectedStr, "dataValue("):]
-				// fmt.Println("expectedStrReMain:", expectedStrReMain)
-				// fmt.Println("expectedStrReMainIndex1:", strings.Index(expectedStrReMain, "dataValue(")+len("dataValue("))
-				// fmt.Println("expectedStrReMainIndex2:", strings.Index(expectedStrReMain, ")"))
-				expectedStrPath := expectedStrReMain[strings.Index(expectedStrReMain, "dataValue(")+len("dataValue(") : strings.Index(expectedStrReMain, ")")-strings.Index(expectedStrReMain, "dataValue(")]
-				// fmt.Println("expectedStrPath:", expectedStrPath)
-
-				if strings.Index(expectedStrReMain, ")") < len(expectedStrReMain)-1 {
-					expectedStrRight = expectedStrReMain[strings.Index(expectedStrReMain, ")")+1:]
-				}
-
-				value, _ := r.getValueByPath(data, expectedStrPath)
-				return trans.TransValue(expectedStrLeft + fmt.Sprintf("%v", value) + expectedStrRight)
+				break
 			}
+		} else {
+			break
 		}
 	}
 

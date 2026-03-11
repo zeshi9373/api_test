@@ -3,6 +3,7 @@ package trans
 import (
 	"fmt"
 	"strings"
+	"test_api/cache"
 	"test_api/conf"
 	"test_api/fn"
 	"test_api/tool"
@@ -13,15 +14,19 @@ func TransValue(value any) any {
 	value = TransCacheValue(value)
 	value = TransFnValue(value)
 
-	if valueType, ok := value.(string); ok {
-		if strings.Contains(valueType, "expr(") && strings.Contains(valueType, ")") {
-			result, err := tool.EvaluateWithGoval(valueType[strings.Index(valueType, "expr(")+5 : strings.Index(valueType, ")")-1])
+	for {
+		if valueType, ok := value.(string); ok {
+			if strings.Contains(valueType, "expr(") && strings.Contains(valueType, ")") {
+				result, err := tool.EvaluateWithGoval(valueType[strings.Index(valueType, "expr(")+5 : strings.Index(valueType, ")")-1])
 
-			if err != nil {
-				return value
+				if err == nil {
+					value = result
+				}
+			} else {
+				break
 			}
-
-			return result
+		} else {
+			break
 		}
 	}
 
@@ -29,21 +34,29 @@ func TransValue(value any) any {
 }
 
 func TransConfigValue(value any) any {
-	if valueType, ok := value.(string); ok {
-		for k, v := range conf.Config {
-			if strings.Contains(valueType, "$"+k) {
-				if len(valueType) >= len("$"+k) {
-					vs, err := tool.AnyToString(v)
+	for {
+		if valueType, ok := value.(string); ok {
+			if strings.Contains(valueType, "$") {
+				for k, v := range conf.Config {
+					if strings.Contains(valueType, "$"+k) {
+						if len(valueType) == len("$"+k) {
+							vs, err := tool.AnyToString(v)
 
-					if err != nil {
-						vs = ""
+							if err != nil {
+								vs = ""
+							}
+
+							value = strings.ReplaceAll(value.(string), "$"+k, vs)
+						} else {
+							value = v
+						}
 					}
-
-					value = strings.ReplaceAll(value.(string), "$"+k, vs)
-				} else {
-					value = v
 				}
+			} else {
+				break
 			}
+		} else {
+			break
 		}
 	}
 
@@ -51,21 +64,29 @@ func TransConfigValue(value any) any {
 }
 
 func TransCacheValue(value any) any {
-	if valueType, ok := value.(string); ok {
-		for k, v := range conf.Config {
-			if strings.Contains(valueType, "$cache."+k) {
-				if len(valueType) >= len("$cache."+k) {
-					vs, err := tool.AnyToString(v)
+	for {
+		if valueType, ok := value.(string); ok {
+			if strings.Contains(valueType, "$cache") {
+				for k, v := range cache.Cache {
+					if strings.Contains(valueType, "$cache."+k) {
+						if len(valueType) >= len("$cache."+k) {
+							vs, err := tool.AnyToString(v)
 
-					if err != nil {
-						vs = ""
+							if err != nil {
+								vs = ""
+							}
+
+							value = strings.ReplaceAll(value.(string), "$cache."+k, vs)
+						} else {
+							value = v
+						}
 					}
-
-					value = strings.ReplaceAll(value.(string), "$cache."+k, vs)
-				} else {
-					value = v
 				}
+			} else {
+				break
 			}
+		} else {
+			break
 		}
 	}
 
@@ -73,25 +94,31 @@ func TransCacheValue(value any) any {
 }
 
 func TransFnValue(value any) any {
-	if valueType, ok := value.(string); ok {
-		if strings.Contains(valueType, "fn.") && strings.Contains(valueType, ")") {
-			start := strings.Index(valueType, "fn.")
-			end := strings.Index(valueType, ")")
-			result, err := fn.NewFuncManager().Call(valueType[start : end+1])
-
-			if err != nil {
-				return value
-			}
-
-			if len(valueType) > end+1 {
-				value = valueType[0:start] + fmt.Sprintf("%v", result) + valueType[end+1:]
-			} else {
-				if start > 0 {
-					value = valueType[0:start] + fmt.Sprintf("%v", result)
-				} else {
-					value = result
+	for {
+		if valueType, ok := value.(string); ok {
+			if strings.Contains(valueType, "fn.") && strings.Contains(valueType, ")") {
+				start := strings.Index(valueType, "fn.")
+				end := strings.Index(valueType, ")")
+				result, err := fn.NewFuncManager().Call(valueType[start : end+1])
+				// fmt.Println("result:", result, " err:", err)
+				if err != nil {
+					return value
 				}
+
+				if len(valueType) > end+1 {
+					value = valueType[0:start] + fmt.Sprintf("%v", result) + valueType[end+1:]
+				} else {
+					if start > 0 {
+						value = valueType[0:start] + fmt.Sprintf("%v", result)
+					} else {
+						value = result
+					}
+				}
+			} else {
+				break
 			}
+		} else {
+			break
 		}
 	}
 
