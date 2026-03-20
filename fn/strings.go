@@ -27,3 +27,7 @@ func RandString(flag string, length int) string {
 
 	return resultString
 }
+
+func ReplaceString(str, old, new string) string {
+	return strings.ReplaceAll(str, old, new)
+}

@@ -46,21 +46,32 @@ func GetCase(filepath string) {
 	if err != nil {
 		TestTotal.Fail++
 		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件不存在 ："+filepath))
+		fmt.Printf("测试文件不存在 ：%s", filepath)
 		return
 	}
 
 	var testCase APITestCase
-	yaml.Unmarshal(byteStream, &testCase)
+	err = yaml.Unmarshal(byteStream, &testCase)
+
+	if err != nil {
+		fmt.Println("unmarshal err", err)
+		TestTotal.Fail++
+		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件格式不支持 ："+filepath))
+		fmt.Printf("测试文件格式不支持 ：%s", filepath)
+		return
+	}
 
 	if len(testCase.API) == 0 {
 		TestTotal.Fail++
 		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件api为空 ："+filepath))
+		fmt.Printf("%s", "测试文件api为空 ："+filepath)
 		return
 	}
 
 	if len(testCase.Method) == 0 {
 		TestTotal.Fail++
 		TestTotal.FailDetal = append(TestTotal.FailDetal, fmt.Sprintf("%s", "测试文件method为空 ："+filepath))
+		fmt.Printf("%s", "测试文件method为空 ："+filepath)
 		return
 	}
 
@@ -76,7 +87,7 @@ func GetCase(filepath string) {
 
 	p, _ := json.Marshal(testCase.Params)
 	testCase.FilePath = filepath
-	fmt.Printf("接口测试开始 %s (%s)\n请求参数：%s\n", testCase.API, testCase.Description, string(p))
+	fmt.Printf("接口测试开始 %s (%s)\n执行文件：%s\n请求参数：%s\n", testCase.API, testCase.Description, filepath, string(p))
 
 	testCase.Headers = trans.TransValueHeaders(testCase.Headers)
 	testCase.Params = trans.TransValueParams(testCase.Params)

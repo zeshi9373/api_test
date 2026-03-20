@@ -25,6 +25,7 @@ func NewFuncManager() *FuncManager {
 			"fn.DateTime":        DateTime,
 			"fn.RandString":      RandString,
 			"fn.SearchListValue": SearchListValue,
+			"fn.ReplaceString":   ReplaceString,
 		},
 	}
 }
@@ -51,7 +52,7 @@ func (fm *FuncManager) Call(funcExpr string) (interface{}, error) {
 	if argsStr != "" {
 		argStrs := splitArgs(argsStr)
 		fnType := reflect.TypeOf(fn)
-
+		// fmt.Println("argStrs:", argStrs, "argLen:", len(argStrs), " fnNum:", fnType.NumIn(), "first:", argStrs[0])
 		for i, argStr := range argStrs {
 			if i >= fnType.NumIn() {
 				break
@@ -65,7 +66,7 @@ func (fm *FuncManager) Call(funcExpr string) (interface{}, error) {
 			args = append(args, reflect.ValueOf(arg))
 		}
 	}
-
+	// fmt.Println("args:", args)
 	// 调用函数
 	results := reflect.ValueOf(fn).Call(args)
 	if len(results) > 0 {

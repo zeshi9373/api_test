@@ -91,7 +91,12 @@ Authorization: "Bearer $token"  // 使用全局变量 config.yaml内配置 $+变
 
 比较中含有接口获取的值
 ```
-dataValue(data.list.0.id)   // dataValue(path)  path是值的层级
+dataValue(data.list.0.id)   // dataValue(path)  path是值的层级  层级中有列表时，判断列表每条数据示例 dataValue(data.list.each.id) 判断随机一条数据 dataValue(data.list.rand.id)
+```
+
+预期值断言中 assertContains 包含多个参数或者至少一个参数时，可以用@@(全部都包含)或者||(至少包含一个)_连接多个参数
+```
+id=dataValue(data.list.0.id)&@@media_type=dataValue(data.list.0.media_type)&   // dataValue(path)  path是值的层级
 ```
 
 # 支持的方法
@@ -105,6 +110,7 @@ TimeNanos()                // 当前时间纳秒数
 Date()                         // 当前日期 格式 2026-01-26
 DateTime()                 // 当前时间 格式 2026-01-26 19:48:23
 RandString(flag,length)  // 随机字符串 flag标识 N代表含大写字母 n代表含小写字母 1代表含数字 S代表含特殊字符   length 长度  调用方式fn.RandString("Nn1",10)
+ReplaceString(str,old,new)  // 字符串替换 str 原字符串 old 旧字符串 new 新字符串  调用方式fn.ReplaceString("123456","123","abc")
 SearchListValue(data,searchKey,searchValue,getKey)  // 搜索列表数据 data 列表数据 searchKey 搜索字段 searchValue 搜索值 getKey 获取字段  data格式要[]map[string]any
 ```
 
