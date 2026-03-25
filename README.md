@@ -110,8 +110,9 @@ TimeNanos()                // 当前时间纳秒数
 Date()                         // 当前日期 格式 2026-01-26
 DateTime()                 // 当前时间 格式 2026-01-26 19:48:23
 RandString(flag,length)  // 随机字符串 flag标识 N代表含大写字母 n代表含小写字母 1代表含数字 S代表含特殊字符   length 长度  调用方式fn.RandString("Nn1",10)
-ReplaceString(str,old,new)  // 字符串替换 str 原字符串 old 旧字符串 new 新字符串  调用方式fn.ReplaceString("123456","123","abc")
+ReplaceString(str,old,new)  // 字符串替换 str 原字符串 old 旧字符串(多个用｜隔开) new 新字符串(多个用｜隔开)  调用方式fn.ReplaceString("123456","123","abc") old/new个数匹配，否则替换都是整个new
 SearchListValue(data,searchKey,searchValue,getKey)  // 搜索列表数据 data 列表数据 searchKey 搜索字段 searchValue 搜索值 getKey 获取字段  data格式要[]map[string]any
+UrlEncode(str)  // url编码  str 原字符串  调用方式fn.UrlEncode("https://www.baidu.com")
 ```
 
 ### 使用方式
