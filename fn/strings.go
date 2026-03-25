@@ -29,5 +29,25 @@ func RandString(flag string, length int) string {
 }
 
 func ReplaceString(str, old, new string) string {
-	return strings.ReplaceAll(str, old, new)
+	old = strings.ReplaceAll(old, "\"", "")
+	new = strings.ReplaceAll(new, "\"", "")
+
+	if strings.Contains(old, "|") {
+		oldSlice := strings.Split(old, "|")
+		newSlice := strings.Split(new, "|")
+
+		if len(oldSlice) == len(newSlice) {
+			for i, v := range oldSlice {
+				str = strings.ReplaceAll(str, v, newSlice[i])
+			}
+		} else {
+			for _, v := range oldSlice {
+				str = strings.ReplaceAll(str, v, new)
+			}
+		}
+
+		return str
+	} else {
+		return strings.ReplaceAll(str, old, new)
+	}
 }

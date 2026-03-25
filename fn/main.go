@@ -26,6 +26,7 @@ func NewFuncManager() *FuncManager {
 			"fn.RandString":      RandString,
 			"fn.SearchListValue": SearchListValue,
 			"fn.ReplaceString":   ReplaceString,
+			"fn.UrlEncode":       UrlEncode,
 		},
 	}
 }
@@ -81,6 +82,7 @@ func splitArgs(s string) []string {
 	// 简单分割，不支持嵌套括号
 	var args []string
 	var current strings.Builder
+	var quoteDepthSigle, quoteDepthDouble int
 	parenDepth := 0
 
 	for _, r := range s {
@@ -102,6 +104,24 @@ func splitArgs(s string) []string {
 			current.WriteRune(r)
 		case '}':
 			parenDepth--
+			current.WriteRune(r)
+		case '\'':
+			if quoteDepthSigle == 0 {
+				quoteDepthSigle++
+				parenDepth++
+			} else {
+				quoteDepthSigle--
+				parenDepth--
+			}
+			current.WriteRune(r)
+		case '"':
+			if quoteDepthDouble == 0 {
+				quoteDepthDouble++
+				parenDepth++
+			} else {
+				quoteDepthDouble--
+				parenDepth--
+			}
 			current.WriteRune(r)
 		case ',':
 			if parenDepth == 0 {
